@@ -1,0 +1,37 @@
+{
+  "name": "o",
+  "version": "0.0.1",
+  "description": "The worst possible React clone",
+  "module": "o.js",
+  "scripts": {
+    "test": "eslint *.mjs && node --experimental-modules test.mjs",
+    "minify": "terser --compress --mangle -- o.mjs > o.min.mjs && ls -l o.min.mjs && gzip -f o.min.mjs && ls -l o.min.mjs.gz && rm -f o.min.mjs.gz"
+  },
+  "eslintConfig": {
+    "extends": [
+      "eslint:recommended",
+      "prettier"
+    ],
+    "plugins": [
+      "prettier"
+    ],
+    "env": {
+      "browser": true,
+      "node": true
+    },
+    "parserOptions": {
+      "ecmaVersion": "2015",
+      "sourceType": "module"
+    }
+  },
+  "repository": "zserge/o",
+  "author": "Serge Zaitsev <zaitsev.serge@gmail.com>",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "eslint": "^6.6.0",
+    "eslint-config-prettier": "^6.5.0",
+    "eslint-plugin-prettier": "^3.1.1",
+    "jsdom": "^15.2.0",
+    "terser": "^4.3.9"
+  }
+}
