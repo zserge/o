@@ -23,10 +23,10 @@ export const x = (strings, ...fields) => {
         case MODE_TEXT:
           if (s[0] === '<') {
             if (s[1] === '/') {
-              [s, val] = find(s.substring(2), /^([a-zA-Z]+)/, fields[i]);
+              [s, val] = find(s.substring(2), /^([a-zA-Z0-9]+)/, fields[i]);
               mode = MODE_CLOSE;
             } else {
-              [s, val] = find(s.substring(1), /^([a-zA-Z]+)/, fields[i]);
+              [s, val] = find(s.substring(1), /^([a-zA-Z0-9]+)/, fields[i]);
               mode = MODE_OPEN;
               stack.push({ e: val, p: {}, c: [] });
             }
@@ -90,6 +90,16 @@ export const useReducer = (reducer, init) => {
 };
 
 export const useState = init => useReducer((_, v) => v, init);
+
+export const useEffect = (cb, args = []) => {
+  const hook = getHook();
+  if (changed(hook.value, args)) {
+    hook.value = args;
+    cb();
+  }
+};
+
+const changed = (a, b) => !a || b.some((arg, i) => arg !== a[i]);
 
 // Patch DOM according to the hyperscript nodes
 export const render = (vlist, dom) => {

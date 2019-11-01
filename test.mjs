@@ -1,7 +1,7 @@
 import assert from 'assert';
 import jsdom from 'jsdom';
 
-import { h, x, render, useState, useReducer } from './o.mjs';
+import { h, x, render, useState, useReducer, useEffect } from './o.mjs';
 
 // Global document mock
 global.document = new jsdom.JSDOM(`<html><body></body></html>`).window.document;
@@ -185,6 +185,27 @@ $['hooks: reorder with id'] = () => {
   render(h(B), document.body);
   assert.equal(document.querySelector('#c3 .count').textContent, 'Count: 2');
   assert.equal(document.querySelector('#c4 .count').textContent, 'Count: 1');
+};
+
+$['hooks: useEffect'] = () => {
+  let called = 0;
+  const Title = ({ title }) => {
+    useEffect(() => {
+      called++;
+      document.title = title;
+    }, [title]);
+    return x`<h1>${title}</h1>`;
+  };
+  document.body.innerHTML = '';
+  render(h(Title, { title: 'foo' }), document.body);
+  assert.equal(called, 1);
+  assert.equal(document.querySelector('h1').textContent, 'foo');
+  render(h(Title, { title: 'foo' }), document.body);
+  assert.equal(called, 1);
+  assert.equal(document.querySelector('h1').textContent, 'foo');
+  render(h(Title, { title: 'bar' }), document.body);
+  assert.equal(called, 2);
+  assert.equal(document.querySelector('h1').textContent, 'bar');
 };
 
 // ---------------------------------------------------------------------------
