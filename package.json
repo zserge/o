@@ -1,8 +1,8 @@
 {
-  "name": "o",
+  "name": "@zserge/o",
   "version": "0.0.1",
   "description": "The worst possible React clone",
-  "module": "o.js",
+  "module": "o.mjs",
   "scripts": {
     "test": "eslint *.mjs && node --experimental-modules test.mjs",
     "minify": "terser --compress --mangle -- o.mjs > o.min.mjs && ls -l o.min.mjs && gzip -f o.min.mjs && ls -l o.min.mjs.gz && rm -f o.min.mjs.gz"
