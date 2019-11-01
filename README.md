@@ -1,6 +1,8 @@
 # O!
 
 [![Build Status](https://travis-ci.org/zserge/o.svg?branch=master)](https://travis-ci.org/zserge/o)
+[![npm](https://img.shields.io/npm/v/@zserge/o.svg)](http://npm.im/@zserge/o)
+[![gzip size](http://img.badgesize.io/https://unpkg.com/@zserge/o/o.min.mjs?compression=gzip)](https://unpkg.com/@zserge/o/o.min.mjs)
 
 <div>
 <img align="left" src="https://raw.githubusercontent.com/zserge/o/master/logo.png" alt="O!" />
