@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+	<body>
+	</body>
+	<script type="module">
+		import {h, x, render, useState} from './o.mjs';
+
+		const Counter = ({name = 'Counter', initialValue = 0}) => {
+			const [value, setValue] = useState(initialValue);
+			return x`
+				<div className="counter">
+					<h1>${name}</h1>
+					<div>${value}</div>
+					<div className="row">
+						<button onclick=${() => setValue(value + 1)}>+</button>
+						<button onclick=${() => setValue(value - 1)}>-</button>
+					</div>
+				</div>
+			`;
+		};
+
+		render(h(Counter, {initialValue: 10}), document.body);
+	</script>
+</html>

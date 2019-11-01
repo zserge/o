@@ -129,7 +129,7 @@ export const render = (vlist, dom) => {
     // Corresponding DOM node, if any. Reuse if tag and text matches. Insert
     // new DOM node before otherwise.
     let n = dom.childNodes[i];
-    if (!n || (n.e !== v.e && n.data !== v)) {
+    if (!n || (v.e ? n.e !== v.e : n.data !== v)) {
       n = dom.insertBefore($(), n);
     }
     if (v.e) {
