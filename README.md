@@ -44,6 +44,8 @@ const Counter = ({ initialValue = 0 }) => {
 render(h(Counter, { initialValue: 10 }), document.body);
 ```
 
+See it [live](https://raw.githack.com/zserge/o/master/counter.html)
+
 ## What a weird name for a project
 
 The library is called "O!". It's a sound of realisation, once you understood how simple it is. Or despair, if you caught a fatal bug after you decided to use this in production. It also resembles a zero, which is a metaphor for both, library footprint and usefulness. More details on how this library originated at https://zserge.com/posts/worst-react-ever/
