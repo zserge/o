@@ -50,7 +50,7 @@ export const x = (strings, ...fields) => {
             } else {
               [s, val] = find(s.substring(1), /^([a-zA-Z0-9]+)/, fields[i]);
               mode = MODE_OPEN;
-              stack.push({ e: val, p: {}, c: [] });
+              stack.push(h(val, {}));
             }
           } else {
             [s, val] = find(s, /^([^<]+)/, '');
