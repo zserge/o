@@ -116,10 +116,10 @@ let getHook = value => {
  */
 export const useReducer = (reducer, initialState) => {
   const hook = getHook(initialState);
-  const f = forceUpdate;
-  const dispatch = v => {
-    hook.value = reducer(hook.value, v);
-    f();
+  const update = forceUpdate;
+  const dispatch = action => {
+    hook.value = reducer(hook.value, action);
+    update();
   };
   return [hook.value, dispatch];
 };
@@ -179,27 +179,27 @@ export const render = (vlist, dom) => {
       dom.h[k] = hooks;
     }
     // DOM node builder for the given v node
-    let $ = () =>
+    let createNode = () =>
       v.e ? document.createElement(v.e) : document.createTextNode(v);
     // Corresponding DOM node, if any. Reuse if tag and text matches. Insert
     // new DOM node before otherwise.
-    let n = dom.childNodes[i];
-    if (!n || (v.e ? n.e !== v.e : n.data !== v)) {
-      n = dom.insertBefore($(), n);
+    let node = dom.childNodes[i];
+    if (!node || (v.e ? node.e !== v.e : node.data !== v)) {
+      node = dom.insertBefore(createNode(), node);
     }
     if (v.e) {
-      n.e = v.e;
-      for (let k in v.p) {
-        if (n[k] !== v.p[k]) {
-          n[k] = v.p[k];
+      node.e = v.e;
+      for (let propName in v.p) {
+        if (node[propName] !== v.p[propName]) {
+          node[propName] = v.p[propName];
         }
       }
-      render(v.c, n);
+      render(v.c, node);
     } else {
-      n.data = v;
+      node.data = v;
     }
   });
-  for (let c; (c = dom.childNodes[vlist.length]); ) {
-    dom.removeChild(c);
+  for (let child; (child = dom.childNodes[vlist.length]); ) {
+    dom.removeChild(child);
   }
 };
