@@ -1,7 +1,29 @@
-// Hyperscript function
+/**
+ * Create a virtual node. Short, one-letter property names are used to reduce
+ * the minifies JS code size. "e" stands for element, "p" for properties and
+ * "c" for children.
+ *
+ * @param e  - The node name (HTML tag name), or a functional component, that
+ * constructs a virtual node.
+ * @param [p] - The properties map of the virtual node.
+ * @param [c] - The children array of the virtual node.
+ *
+ * @returns {object} A virtual node object.
+ */
 export const h = (e, p = {}, ...c) => ({ e, p, c });
 
-// Minimal JSX-like parser based on tagged template literals
+/**
+ * Create a virtual node based on the HTML-like template string, i.e:
+ * `<tag attr="value" attr2="value2"></tag>`. Tags can be self-closing.
+ * Attribute values must be double quoted, unless they are placeholders.
+ * Placeholders can appear only as tag names, attribute values or in between
+ * the tags, like text or child elements.
+ *
+ * @param [strings] - An array of raw string values from the template.
+ * @param [fields] - Variadic arguments, containing the placeholders in between.
+ * @returns {object} - A virtual node with properties and children based on the
+ * provided HTML markup.
+ */
 export const x = (strings, ...fields) => {
   const stack = [{ c: [] }];
   const find = (s, re, arg) => {
@@ -67,20 +89,33 @@ export const x = (strings, ...fields) => {
   return stack[0].c[0];
 };
 
+// Global array of hooks for the current functional component
 let hooks;
+// Global index of the current hook in the array of hooks above
 let index = 0;
+// Function, that forces an update of the current component
 let forceUpdate;
-let getHook = init => {
+// Returns an existing hook at the current index for the current component, or
+// creates a new one.
+let getHook = value => {
   let hook = hooks[index++];
   if (!hook) {
-    hook = { value: init };
+    hook = { value };
     hooks.push(hook);
   }
   return hook;
 };
 
-export const useReducer = (reducer, init) => {
-  const hook = getHook(init);
+/**
+ * Provides a redux-like state management for functional components.
+ *
+ * @param reducer - A function that creates a new state based on the action
+ * @param initialState - Initial state value
+ * @returns {[ dispatch, (state) => void ]} - Action dispatcher and current
+ * state.
+ */
+export const useReducer = (reducer, initialState) => {
+  const hook = getHook(initialState);
   const f = forceUpdate;
   const dispatch = v => {
     hook.value = reducer(hook.value, v);
@@ -89,8 +124,22 @@ export const useReducer = (reducer, init) => {
   return [hook.value, dispatch];
 };
 
-export const useState = init => useReducer((_, v) => v, init);
+/**
+ * Provides a local component state that persists between component updates.
+ * @param initialState - Initial state value
+ * @return {[state, setState: (state) => void]} - Current state value and
+ * setter function.
+ */
+export const useState = initialState => useReducer((_, v) => v, initialState);
 
+/**
+ * Provides a callback that may cause side effects for the current component.
+ * Callback will be evaluated only when the args array is changed.
+ *
+ * @param cb - Callback function
+ * @param [args] - Array of callback dependencies. If the values in the array
+ * are modified - callback is evaluated on the next render.
+ */
 export const useEffect = (cb, args = []) => {
   const hook = getHook();
   if (changed(hook.value, args)) {
@@ -99,9 +148,15 @@ export const useEffect = (cb, args = []) => {
   }
 };
 
+// Returns true if two arrays `a` and `b` are different.
 const changed = (a, b) => !a || b.some((arg, i) => arg !== a[i]);
 
-// Patch DOM according to the hyperscript nodes
+/**
+ * Render a virtual node into a DOM element.
+ *
+ * @param vnode - The virtual node to render.
+ * @param dom - The DOM element to render into.
+ */
 export const render = (vlist, dom) => {
   // Make vlist always an array, even if it's a single node.
   vlist = [].concat(vlist);
