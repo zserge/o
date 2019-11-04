@@ -25,56 +25,72 @@ export const h = (e, p = {}, ...c) => ({ e, p, c });
  * provided HTML markup.
  */
 export const x = (strings, ...fields) => {
-  const stack = [{ c: [] }];
-  const find = (s, re, arg) => {
+  // Stack of nested tags. Start with a fake top node. The actual top virtual
+  // node would become the first child of this node.
+  const stack = [h()];
+  // Three distinct parser states: text between the tags, open tag with
+  // attributes and closing tag. Parser starts in text mode.
+  const MODE_TEXT = 0;
+  const MODE_OPEN_TAG = 1;
+  const MODE_CLOSE_TAG = 2;
+  let mode = MODE_TEXT;
+  // Read and return the next word from the string, starting at position i. If
+  // the string is empty - return the corresponding placeholder field.
+  const readToken = (s, i, regexp, field) => {
+    s = s.substring(i);
     if (!s) {
-      return [s, arg];
+      return [s, field];
     }
-    let m = s.match(re);
+    const m = s.match(regexp);
     return [s.substring(m[0].length), m[1]];
   };
-  const MODE_TEXT = 0;
-  const MODE_OPEN = 1;
-  const MODE_CLOSE = 2;
-  let mode = MODE_TEXT;
   strings.forEach((s, i) => {
     while (s) {
       let val;
       s = s.trimLeft();
       switch (mode) {
         case MODE_TEXT:
+          // In text mode, we expect either `</` (closing tag) or `<` (opening tag), or raw text.
+          // Depending on what we found, switch parser mode. For opening tag - push a new h() node
+          // to the stack.
           if (s[0] === '<') {
             if (s[1] === '/') {
-              [s, val] = find(s.substring(2), /^([a-zA-Z0-9]+)/, fields[i]);
-              mode = MODE_CLOSE;
+              [s] = readToken(s, 2, /^([a-zA-Z0-9_-]+)/, fields[i]);
+              mode = MODE_CLOSE_TAG;
             } else {
-              [s, val] = find(s.substring(1), /^([a-zA-Z0-9]+)/, fields[i]);
-              mode = MODE_OPEN;
+              [s, val] = readToken(s, 1, /^([a-zA-Z0-9_-]+)/, fields[i]);
               stack.push(h(val, {}));
+              mode = MODE_OPEN_TAG;
             }
           } else {
-            [s, val] = find(s, /^([^<]+)/, '');
+            [s, val] = readToken(s, 0, /^([^<]+)/, '');
             stack[stack.length - 1].c.push(val);
           }
           break;
-        case MODE_OPEN:
+        case MODE_OPEN_TAG:
+          // Within the opening tag, look for `/>` (self-closing tag), or just
+          // `>`, or attribute key/value pair. Switch mode back to "text" when
+          // tag is ended. For attributes, put key/value pair to the properties
+          // map of the top-level node from the stack.
           if (s[0] === '/' && s[1] === '>') {
-            s = s.substring(2);
             stack[stack.length - 2].c.push(stack.pop());
             mode = MODE_TEXT;
+            s = s.substring(2);
           } else if (s[0] === '>') {
-            s = s.substring(1);
             mode = MODE_TEXT;
+            s = s.substring(1);
           } else {
-            let m = s.match(/^([a-zA-Z0-9]+)=/);
-            console.assert(m);
-            s = s.substring(m[0].length);
-            let k = m[1];
-            [s, val] = find(s, /^"([^"]*)"/, fields[i]);
-            stack[stack.length - 1].p[k] = val;
+            [s, val] = readToken(s, 0, /^([a-zA-Z0-9_-]+)=/, '');
+            console.assert(val);
+            let propName = val;
+            [s, val] = readToken(s, 0, /^"([^"]*)"/, fields[i]);
+            stack[stack.length - 1].p[propName] = val;
           }
           break;
-        case MODE_CLOSE:
+        case MODE_CLOSE_TAG:
+          // In closing tag mode we only look for the `>` to switch back to the
+          // text mode. Top level node is popped from the stack and appended to
+          // the children array of the next node from the stack.
           console.assert(s[0] === '>');
           stack[stack.length - 2].c.push(stack.pop());
           s = s.substring(1);
