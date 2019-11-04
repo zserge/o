@@ -1,6 +1,6 @@
 /**
  * Create a virtual node. Short, one-letter property names are used to reduce
- * the minifies JS code size. "e" stands for element, "p" for properties and
+ * the minified JS code size. "e" stands for element, "p" for properties and
  * "c" for children.
  *
  * @param e  - The node name (HTML tag name), or a functional component, that
