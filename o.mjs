@@ -1,14 +1,27 @@
 /**
+ * A virtual node object.
+ * @typedef VNode
+ * @type {object}
+ * @property {string|function} e Node name or a functional component
+ * @property {object} p Node properties (attributes)
+ * @property {Array.<VNode>} c Node children
+ */
+
+/**
  * Create a virtual node. Short, one-letter property names are used to reduce
  * the minified JS code size. "e" stands for element, "p" for properties and
  * "c" for children.
  *
- * @param e  - The node name (HTML tag name), or a functional component, that
- * constructs a virtual node.
- * @param [p] - The properties map of the virtual node.
- * @param [c] - The children array of the virtual node.
+ * @todo Once Terser starts handling property mangling a bit better - we can
+ * pick up more meaningful property names.
  *
- * @returns {object} A virtual node object.
+ * @function
+ * @param {string|function} e  The node name (HTML tag name), or a functional component, that
+ * constructs a virtual node.
+ * @param {?object} [p={}] The properties map of the virtual node.
+ * @param {...VNode} [c] Variadic list of the virtual node child elements.
+ *
+ * @returns {VNode} A virtual node object.
  */
 export const h = (e, p = {}, ...c) => ({ e, p, c });
 
@@ -19,9 +32,10 @@ export const h = (e, p = {}, ...c) => ({ e, p, c });
  * Placeholders can appear only as tag names, attribute values or in between
  * the tags, like text or child elements.
  *
- * @param [strings] - An array of raw string values from the template.
- * @param [fields] - Variadic arguments, containing the placeholders in between.
- * @returns {object} - A virtual node with properties and children based on the
+ * @function
+ * @param {Array.<string>} strings - An array of raw string values from the template.
+ * @param {...*} [fields] - Variadic arguments, containing the placeholders in between.
+ * @returns {VNode} - A virtual node with properties and children based on the
  * provided HTML markup.
  */
 export const x = (strings, ...fields) => {
@@ -125,9 +139,10 @@ let getHook = value => {
 /**
  * Provides a redux-like state management for functional components.
  *
- * @param reducer - A function that creates a new state based on the action
- * @param initialState - Initial state value
- * @returns {[ dispatch, (state) => void ]} - Action dispatcher and current
+ * @function
+ * @param {function} reducer - A function that creates a new state based on the action
+ * @param {*} [initialState] - Initial state value
+ * @returns {Array} [ dispatch, (state) => void ] - Action dispatcher and current
  * state.
  */
 export const useReducer = (reducer, initialState) => {
@@ -142,9 +157,10 @@ export const useReducer = (reducer, initialState) => {
 
 /**
  * Provides a local component state that persists between component updates.
+ *
+ * @function
  * @param initialState - Initial state value
- * @return {[state, setState: (state) => void]} - Current state value and
- * setter function.
+ * @returns {Array} [state, (newState) => void]} - Current state value and setter function.
  */
 export const useState = initialState => useReducer((_, v) => v, initialState);
 
@@ -152,8 +168,9 @@ export const useState = initialState => useReducer((_, v) => v, initialState);
  * Provides a callback that may cause side effects for the current component.
  * Callback will be evaluated only when the args array is changed.
  *
- * @param cb - Callback function
- * @param [args] - Array of callback dependencies. If the values in the array
+ * @function
+ * @param {function(void):void} cb - Callback function
+ * @param {Array} [args] - Array of callback dependencies. If the values in the array
  * are modified - callback is evaluated on the next render.
  */
 export const useEffect = (cb, args = []) => {
@@ -170,8 +187,9 @@ const changed = (a, b) => !a || b.some((arg, i) => arg !== a[i]);
 /**
  * Render a virtual node into a DOM element.
  *
- * @param vnode - The virtual node to render.
- * @param dom - The DOM element to render into.
+ * @function
+ * @param {VNode|VNode[]} vnode - The virtual node to render.
+ * @param {Element} dom - The DOM element to render into.
  */
 export const render = (vlist, dom) => {
   // Make vlist always an array, even if it's a single node.

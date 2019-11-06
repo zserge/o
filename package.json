@@ -5,7 +5,8 @@
   "module": "o.mjs",
   "scripts": {
     "test": "eslint o.mjs test.mjs && node --experimental-modules test.mjs",
-    "minify": "terser --compress=drop_console --mangle --module -- o.mjs > o.min.mjs && ls -l o.min.mjs && gzip -cf9 o.min.mjs > o.min.mjs.gz && ls -l o.min.mjs.gz && rm -f o.min.mjs.gz"
+    "doc": "cp o.mjs o.js ; jsdoc . ; rm o.js",
+    "minify": "terser --compress=drop_console,ecma=6,passes=2 --mangle --module -- o.mjs > o.min.mjs && ls -l o.min.mjs && gzip -cf9 o.min.mjs > o.min.mjs.gz && ls -l o.min.mjs.gz && rm -f o.min.mjs.gz"
   },
   "eslintConfig": {
     "extends": [
@@ -31,6 +32,7 @@
     "eslint": "^6.6.0",
     "eslint-config-prettier": "^6.5.0",
     "eslint-plugin-prettier": "^3.1.1",
+    "jsdoc": "^3.6.3",
     "jsdom": "^15.2.0",
     "terser": "^4.3.9"
   }
