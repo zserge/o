@@ -1,14 +1,27 @@
 /**
+ * A virtual node object.
+ * @typedef VNode
+ * @type {object}
+ * @property {string|function} e Node name or a functional component
+ * @property {object} p Node properties (attributes)
+ * @property {Array.<VNode>} c Node children
+ */
+
+/**
  * Create a virtual node. Short, one-letter property names are used to reduce
- * the minifies JS code size. "e" stands for element, "p" for properties and
+ * the minified JS code size. "e" stands for element, "p" for properties and
  * "c" for children.
  *
- * @param e  - The node name (HTML tag name), or a functional component, that
- * constructs a virtual node.
- * @param [p] - The properties map of the virtual node.
- * @param [c] - The children array of the virtual node.
+ * @todo Once Terser starts handling property mangling a bit better - we can
+ * pick up more meaningful property names.
  *
- * @returns {object} A virtual node object.
+ * @function
+ * @param {string|function} e  The node name (HTML tag name), or a functional component, that
+ * constructs a virtual node.
+ * @param {?object} [p={}] The properties map of the virtual node.
+ * @param {...VNode} [c] Variadic list of the virtual node child elements.
+ *
+ * @returns {VNode} A virtual node object.
  */
 export const h = (e, p = {}, ...c) => ({ e, p, c });
 
@@ -19,62 +32,79 @@ export const h = (e, p = {}, ...c) => ({ e, p, c });
  * Placeholders can appear only as tag names, attribute values or in between
  * the tags, like text or child elements.
  *
- * @param [strings] - An array of raw string values from the template.
- * @param [fields] - Variadic arguments, containing the placeholders in between.
- * @returns {object} - A virtual node with properties and children based on the
+ * @function
+ * @param {Array.<string>} strings - An array of raw string values from the template.
+ * @param {...*} [fields] - Variadic arguments, containing the placeholders in between.
+ * @returns {VNode} - A virtual node with properties and children based on the
  * provided HTML markup.
  */
 export const x = (strings, ...fields) => {
-  const stack = [{ c: [] }];
-  const find = (s, re, arg) => {
+  // Stack of nested tags. Start with a fake top node. The actual top virtual
+  // node would become the first child of this node.
+  const stack = [h()];
+  // Three distinct parser states: text between the tags, open tag with
+  // attributes and closing tag. Parser starts in text mode.
+  const MODE_TEXT = 0;
+  const MODE_OPEN_TAG = 1;
+  const MODE_CLOSE_TAG = 2;
+  let mode = MODE_TEXT;
+  // Read and return the next word from the string, starting at position i. If
+  // the string is empty - return the corresponding placeholder field.
+  const readToken = (s, i, regexp, field) => {
+    s = s.substring(i);
     if (!s) {
-      return [s, arg];
+      return [s, field];
     }
-    const m = s.match(re);
+    const m = s.match(regexp);
     return [s.substring(m[0].length), m[1]];
   };
-  const MODE_TEXT = 0;
-  const MODE_OPEN = 1;
-  const MODE_CLOSE = 2;
-  let mode = MODE_TEXT;
   strings.forEach((s, i) => {
     while (s) {
       let val;
       s = s.trimLeft();
       switch (mode) {
         case MODE_TEXT:
+          // In text mode, we expect either `</` (closing tag) or `<` (opening tag), or raw text.
+          // Depending on what we found, switch parser mode. For opening tag - push a new h() node
+          // to the stack.
           if (s[0] === '<') {
             if (s[1] === '/') {
-              [s, val] = find(s.substring(2), /^(\w+)/, fields[i]);
-              mode = MODE_CLOSE;
+              [s] = readToken(s, 2, /^(\w+)/, fields[i]);
+              mode = MODE_CLOSE_TAG;
             } else {
-              [s, val] = find(s.substring(1), /^(\w+)/, fields[i]);
-              mode = MODE_OPEN;
+              [s, val] = readToken(s, 1, /^(\w+)/, fields[i]);
               stack.push(h(val, {}));
+              mode = MODE_OPEN_TAG;
             }
           } else {
-            [s, val] = find(s, /^([^<]+)/, '');
+            [s, val] = readToken(s, 0, /^([^<]+)/, '');
             stack[stack.length - 1].c.push(val);
           }
           break;
-        case MODE_OPEN:
+        case MODE_OPEN_TAG:
+          // Within the opening tag, look for `/>` (self-closing tag), or just
+          // `>`, or attribute key/value pair. Switch mode back to "text" when
+          // tag is ended. For attributes, put key/value pair to the properties
+          // map of the top-level node from the stack.
           if (s[0] === '/' && s[1] === '>') {
-            s = s.substring(2);
             stack[stack.length - 2].c.push(stack.pop());
             mode = MODE_TEXT;
+            s = s.substring(2);
           } else if (s[0] === '>') {
-            s = s.substring(1);
             mode = MODE_TEXT;
+            s = s.substring(1);
           } else {
-            const m = s.match(/^([\w-]+)=/);
-            console.assert(m);
-            s = s.substring(m[0].length);
-            const k = m[1];
-            [s, val] = find(s, /^"([^"]*)"/, fields[i]);
-            stack[stack.length - 1].p[k] = val;
+            [s, val] = readToken(s, 0, /^([\w-]+)=/, '');
+            console.assert(val);
+            let propName = val;
+            [s, val] = readToken(s, 0, /^"([^"]*)"/, fields[i]);
+            stack[stack.length - 1].p[propName] = val;
           }
           break;
-        case MODE_CLOSE:
+        case MODE_CLOSE_TAG:
+          // In closing tag mode we only look for the `>` to switch back to the
+          // text mode. Top level node is popped from the stack and appended to
+          // the children array of the next node from the stack.
           console.assert(s[0] === '>');
           stack[stack.length - 2].c.push(stack.pop());
           s = s.substring(1);
@@ -109,9 +139,10 @@ const getHook = value => {
 /**
  * Provides a redux-like state management for functional components.
  *
- * @param reducer - A function that creates a new state based on the action
- * @param initialState - Initial state value
- * @returns {[ dispatch, (state) => void ]} - Action dispatcher and current
+ * @function
+ * @param {function} reducer - A function that creates a new state based on the action
+ * @param {*} [initialState] - Initial state value
+ * @returns {Array} [ dispatch, (state) => void ] - Action dispatcher and current
  * state.
  */
 export const useReducer = (reducer, initialState) => {
@@ -126,9 +157,10 @@ export const useReducer = (reducer, initialState) => {
 
 /**
  * Provides a local component state that persists between component updates.
+ *
+ * @function
  * @param initialState - Initial state value
- * @return {[state, setState: (state) => void]} - Current state value and
- * setter function.
+ * @returns {Array} [state, (newState) => void]} - Current state value and setter function.
  */
 export const useState = initialState => useReducer((_, v) => v, initialState);
 
@@ -136,8 +168,9 @@ export const useState = initialState => useReducer((_, v) => v, initialState);
  * Provides a callback that may cause side effects for the current component.
  * Callback will be evaluated only when the args array is changed.
  *
- * @param cb - Callback function
- * @param [args] - Array of callback dependencies. If the values in the array
+ * @function
+ * @param {function(void):void} cb - Callback function
+ * @param {Array} [args] - Array of callback dependencies. If the values in the array
  * are modified - callback is evaluated on the next render.
  */
 export const useEffect = (cb, args = []) => {
@@ -154,8 +187,9 @@ const changed = (a, b) => !a || b.some((arg, i) => arg !== a[i]);
 /**
  * Render a virtual node into a DOM element.
  *
- * @param vnode - The virtual node to render.
- * @param dom - The DOM element to render into.
+ * @function
+ * @param {VNode|VNode[]} vnode - The virtual node to render.
+ * @param {Element} dom - The DOM element to render into.
  */
 export const render = (vlist, dom, svg) => {
   // Make vlist always an array, even if it's a single node.
