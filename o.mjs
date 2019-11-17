@@ -30,7 +30,7 @@ export const x = (strings, ...fields) => {
     if (!s) {
       return [s, arg];
     }
-    let m = s.match(re);
+    const m = s.match(re);
     return [s.substring(m[0].length), m[1]];
   };
   const MODE_TEXT = 0;
@@ -45,10 +45,10 @@ export const x = (strings, ...fields) => {
         case MODE_TEXT:
           if (s[0] === '<') {
             if (s[1] === '/') {
-              [s, val] = find(s.substring(2), /^([a-zA-Z0-9]+)/, fields[i]);
+              [s, val] = find(s.substring(2), /^(\w+)/, fields[i]);
               mode = MODE_CLOSE;
             } else {
-              [s, val] = find(s.substring(1), /^([a-zA-Z0-9]+)/, fields[i]);
+              [s, val] = find(s.substring(1), /^(\w+)/, fields[i]);
               mode = MODE_OPEN;
               stack.push(h(val, {}));
             }
@@ -66,10 +66,10 @@ export const x = (strings, ...fields) => {
             s = s.substring(1);
             mode = MODE_TEXT;
           } else {
-            let m = s.match(/^([a-zA-Z0-9]+)=/);
+            const m = s.match(/^([\w-]+)=/);
             console.assert(m);
             s = s.substring(m[0].length);
-            let k = m[1];
+            const k = m[1];
             [s, val] = find(s, /^"([^"]*)"/, fields[i]);
             stack[stack.length - 1].p[k] = val;
           }
@@ -97,7 +97,7 @@ let index = 0;
 let forceUpdate;
 // Returns an existing hook at the current index for the current component, or
 // creates a new one.
-let getHook = value => {
+const getHook = value => {
   let hook = hooks[index++];
   if (!hook) {
     hook = { value };
@@ -157,7 +157,7 @@ const changed = (a, b) => !a || b.some((arg, i) => arg !== a[i]);
  * @param vnode - The virtual node to render.
  * @param dom - The DOM element to render into.
  */
-export const render = (vlist, dom) => {
+export const render = (vlist, dom, svg) => {
   // Make vlist always an array, even if it's a single node.
   vlist = [].concat(vlist);
   // Unique implicit keys counter for un-keyed nodes
@@ -171,7 +171,7 @@ export const render = (vlist, dom) => {
     forceUpdate = () => render(vlist, dom);
     while (typeof v.e === 'function') {
       // Key, explicit v property or implicit auto-incremented key
-      let k = (v.p && v.p.k) || '' + v.e + (ids[v.e] = (ids[v.e] || 1) + 1);
+      const k = (v.p && v.p.k) || '' + v.e + (ids[v.e] = (ids[v.e] || 1) + 1);
       hooks = hs[k] || [];
       index = 0;
       v = v.e(v.p, v.c, forceUpdate);
@@ -179,8 +179,14 @@ export const render = (vlist, dom) => {
       dom.h[k] = hooks;
     }
     // DOM node builder for the given v node
-    let createNode = () =>
-      v.e ? document.createElement(v.e) : document.createTextNode(v);
+    const svgNS = 'http://www.w3.org/2000/svg';
+    svg = svg || v.e === 'svg';
+    const createNode = () =>
+      v.e
+        ? svg
+          ? document.createElementNS(svgNS, v.e)
+          : document.createElement(v.e)
+        : document.createTextNode(v);
     // Corresponding DOM node, if any. Reuse if tag and text matches. Insert
     // new DOM node before otherwise.
     let node = dom.childNodes[i];
@@ -189,12 +195,16 @@ export const render = (vlist, dom) => {
     }
     if (v.e) {
       node.e = v.e;
-      for (let propName in v.p) {
+      for (const propName in v.p) {
         if (node[propName] !== v.p[propName]) {
-          node[propName] = v.p[propName];
+          if (svg) {
+            node.setAttribute(propName, v.p[propName]);
+          } else {
+            node[propName] = v.p[propName];
+          }
         }
       }
-      render(v.c, node);
+      render(v.c, node, svg);
     } else {
       node.data = v;
     }
