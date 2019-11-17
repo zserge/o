@@ -190,8 +190,9 @@ const changed = (a, b) => !a || b.some((arg, i) => arg !== a[i]);
  * @function
  * @param {VNode|VNode[]} vnode - The virtual node to render.
  * @param {Element} dom - The DOM element to render into.
+ * @param {string} ns - namespace URI for SVG nodes.
  */
-export const render = (vlist, dom, svg) => {
+export const render = (vlist, dom, ns) => {
   // Make vlist always an array, even if it's a single node.
   vlist = [].concat(vlist);
   // Unique implicit keys counter for un-keyed nodes
@@ -213,12 +214,11 @@ export const render = (vlist, dom, svg) => {
       dom.h[k] = hooks;
     }
     // DOM node builder for the given v node
-    const svgNS = 'http://www.w3.org/2000/svg';
-    svg = svg || v.e === 'svg';
+    const nsURI = ns || (v.p && v.p.xmlns);
     const createNode = () =>
       v.e
-        ? svg
-          ? document.createElementNS(svgNS, v.e)
+        ? nsURI
+          ? document.createElementNS(nsURI, v.e)
           : document.createElement(v.e)
         : document.createTextNode(v);
     // Corresponding DOM node, if any. Reuse if tag and text matches. Insert
@@ -231,14 +231,14 @@ export const render = (vlist, dom, svg) => {
       node.e = v.e;
       for (const propName in v.p) {
         if (node[propName] !== v.p[propName]) {
-          if (svg) {
+          if (nsURI) {
             node.setAttribute(propName, v.p[propName]);
           } else {
             node[propName] = v.p[propName];
           }
         }
       }
-      render(v.c, node, svg);
+      render(v.c, node, nsURI);
     } else {
       node.data = v;
     }
