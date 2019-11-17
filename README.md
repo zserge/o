@@ -19,6 +19,7 @@
 * Has `h()` and `render()` API with the support of functional components.
 * Has `useState`, `useReducer` and `useEffect` hooks, just like real React.
 * Has a custom template syntax sugar, very similar to normal HTML.
+* Supports SVG tags.
 * Zero dependencies, obviously.
 * No transpiler needed. Just import a single file as a module and start writing code.
 * Should be not so hard to understand and then move on to some more appropriate React clones.
