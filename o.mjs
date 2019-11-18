@@ -299,10 +299,19 @@ export const render = (vlist, dom, ns) => {
       node.data = v;
     }
   });
+  // Iterate over all hooks, if a hook has a useEffect callback set - call it
+  // (since the rendering is now done) and remove.
   Object.values(dom.h).map(componentHooks =>
     componentHooks.map(h => h.cb && ((h.cleanup = h.cb()), (h.cb = 0)))
   );
-  Object.keys(hs).filter(k => !dom.h[k]).map(k => hs[k].map(h => h.cleanup && h.cleanup()));
+  // For all hooks present in the DOM node before rendering, but not present
+  // after - call the cleanup callbacks, if any. This means the corresponding
+  // nodes have been removed from DOM and cleanup should happen. Beware, that
+  // the order is unfortunately not guaranteed, to keep the implementation
+  // simple.
+  Object.keys(hs)
+    .filter(k => !dom.h[k])
+    .map(k => hs[k].map(h => h.cleanup && h.cleanup()));
   for (let child; (child = dom.childNodes[vlist.length]); ) {
     render([], dom.removeChild(child));
   }
