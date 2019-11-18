@@ -189,14 +189,23 @@ $['hooks: reorder with id'] = () => {
 
 $['hooks: useEffect'] = () => {
   let called = 0;
+  let cleanup = 0;
   const Title = ({ title }) => {
+    let afterRender = 0;
     useEffect(() => {
+      assert.equal(afterRender, 1);
+      assert.equal(document.querySelector('h1').textContent, title);
       called++;
       document.title = title;
+      return () => {
+        cleanup++;
+      };
     }, [title]);
+    afterRender = 1;
     return x`<h1>${title}</h1>`;
   };
   document.body.innerHTML = '';
+  // Render and ensure that useEffect is called only when title is changed
   render(h(Title, { title: 'foo' }), document.body);
   assert.equal(called, 1);
   assert.equal(document.querySelector('h1').textContent, 'foo');
@@ -206,6 +215,18 @@ $['hooks: useEffect'] = () => {
   render(h(Title, { title: 'bar' }), document.body);
   assert.equal(called, 2);
   assert.equal(document.querySelector('h1').textContent, 'bar');
+  // Un-mount and ensure that cleanup callback is called
+  render([], document.body);
+  assert.equal(called, 2);
+  assert.equal(cleanup, 1);
+  // Mount again and ensure that useEffect is called once more
+  render(h(Title, { title: 'bar' }), document.body);
+  assert.equal(called, 3);
+  assert.equal(cleanup, 1);
+  // Un-mount and ensure that cleanup callback is called once more
+  render([], document.body);
+  assert.equal(called, 3);
+  assert.equal(cleanup, 2);
 };
 
 // ---------------------------------------------------------------------------

@@ -22,6 +22,9 @@
  * @param {...VNode} [c] Variadic list of the virtual node child elements.
  *
  * @returns {VNode} A virtual node object.
+ *
+ * @example
+ * return h('div', {className: 'foo'}, h('h1', {}, 'Hello!'));
  */
 export const h = (e, p = {}, ...c) => ({ e, p, c });
 
@@ -37,6 +40,11 @@ export const h = (e, p = {}, ...c) => ({ e, p, c });
  * @param {...*} [fields] - Variadic arguments, containing the placeholders in between.
  * @returns {VNode} - A virtual node with properties and children based on the
  * provided HTML markup.
+ *
+ * @example
+ * x`<div className="foo"><h1>${mytext}</h1></div>`;
+ * x`<div className=${myClass} />`;
+ * x`<${MyComponent} foo="42"><p>Hello</p></${MyComponent}>`;
  */
 export const x = (strings, ...fields) => {
   // Stack of nested tags. Start with a fake top node. The actual top virtual
@@ -144,6 +152,23 @@ const getHook = value => {
  * @param {*} [initialState] - Initial state value
  * @returns {Array} [ dispatch, (state) => void ] - Action dispatcher and current
  * state.
+ *
+ * @example
+ * const reducer = (state, action) => {
+ *   switch (action) {
+ *     case 'incr': return state + 1;
+ *     case 'decr': return state - 1;
+ *   }
+ * };
+ * const Counter = () => {
+ *   const [count, dispatch] = useReducer(reducer, 0);
+ *   return x`
+ *     <div>
+ *       <p>Count: ${count}</p>
+ *       <button onclick=${() => dispatch('incr')}>Increment</button>
+ *     </div>
+ *   `;
+ * };
  */
 export const useReducer = (reducer, initialState) => {
   const hook = getHook(initialState);
@@ -161,23 +186,51 @@ export const useReducer = (reducer, initialState) => {
  * @function
  * @param initialState - Initial state value
  * @returns {Array} [state, (newState) => void]} - Current state value and setter function.
+ *
+ * @example
+ * const Counter = () => {
+ *   const [count, setCount] = useState(0);
+ *   return x`
+ *     <div>
+ *       <p>Count: ${count}</p>
+ *       <button onclick=${() => setState(count+1)}>Increment</button>
+ *     </div>
+ *   `;
+ * };
  */
 export const useState = initialState => useReducer((_, v) => v, initialState);
 
 /**
  * Provides a callback that may cause side effects for the current component.
  * Callback will be evaluated only when the args array is changed.
+ * This callback is called after rendering is done, so it can be used to query
+ * for child DOM nodes. An optional return value is a clean-up callback that
+ * will be called right before the component is removed from the DOM tree.
  *
  * @function
  * @param {function(void):void} cb - Callback function
  * @param {Array} [args] - Array of callback dependencies. If the values in the array
  * are modified - callback is evaluated on the next render.
+ *
+ * @returns {function} An optional clean-up callback to be called before
+ * component removal.
+ *
+ * @example
+ * const WindowWidth = () => {
+ *   const [width, setWidth] = useState(0);
+ *   function onResize() { setWidth(window.innerWidth); }
+ *   useEffect(() => {
+ *     window.addEventListener('resize', onResize);
+ *     return () => window.removeEventListener('resize', onResize);
+ *   }, []);
+ *   return x`<div>Window width: ${width}</div>`;
+ * };
  */
 export const useEffect = (cb, args = []) => {
   const hook = getHook();
   if (changed(hook.value, args)) {
     hook.value = args;
-    cb();
+    hook.cb = cb;
   }
 };
 
@@ -191,6 +244,9 @@ const changed = (a, b) => !a || b.some((arg, i) => arg !== a[i]);
  * @param {VNode|VNode[]} vnode - The virtual node to render.
  * @param {Element} dom - The DOM element to render into.
  * @param {string} ns - namespace URI for SVG nodes.
+ *
+ * @example
+ * render(x`<${MyComponent} />`, document.body);
  */
 export const render = (vlist, dom, ns) => {
   // Make vlist always an array, even if it's a single node.
@@ -243,7 +299,11 @@ export const render = (vlist, dom, ns) => {
       node.data = v;
     }
   });
+  Object.values(dom.h).map(componentHooks =>
+    componentHooks.map(h => h.cb && ((h.cleanup = h.cb()), (h.cb = 0)))
+  );
+  Object.keys(hs).filter(k => !dom.h[k]).map(k => hs[k].map(h => h.cleanup && h.cleanup()));
   for (let child; (child = dom.childNodes[vlist.length]); ) {
-    dom.removeChild(child);
+    render([], dom.removeChild(child));
   }
 };
