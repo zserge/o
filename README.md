@@ -66,5 +66,5 @@ The library is called "O!". It's a sound of realisation, once you understood how
 
 ## License
 
-Code is distributed under MIT license, feel free to use it in your proprietary
+Code is distributed under Apache 2.0 license, feel free to use it in your proprietary
 projects as well.
