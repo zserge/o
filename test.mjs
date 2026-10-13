@@ -229,6 +229,25 @@ $['hooks: useEffect'] = () => {
   assert.equal(cleanup, 2);
 };
 
+$['hooks: useEffect length changes'] = () => {
+  let called = 0;
+  const Probe = ({ mode }) => {
+    const deps = mode === 'short' ? [1] : [1, 2];
+    useEffect(() => {
+      called++;
+    }, deps);
+    return x`<div>${mode}</div>`;
+  };
+
+  document.body.innerHTML = '';
+  render(h(Probe, { mode: 'short' }), document.body);
+  assert.equal(called, 1);
+  render(h(Probe, { mode: 'long' }), document.body);
+  assert.equal(called, 2);
+  render(h(Probe, { mode: 'long' }), document.body);
+  assert.equal(called, 2);
+};
+
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------

@@ -235,7 +235,7 @@ export const useEffect = (cb, args = []) => {
 };
 
 // Returns true if two arrays `a` and `b` are different.
-const changed = (a, b) => !a || b.some((arg, i) => arg !== a[i]);
+const changed = (a, b) => !a || a.length !== b.length || b.some((arg, i) => arg !== a[i]);
 
 /**
  * Render a virtual node into a DOM element.
